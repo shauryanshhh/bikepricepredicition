@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dynamic Machine Learning Predictor</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f7f6; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input[type='number'] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background-color: #45a049; }
+        #result { margin-top: 20px; padding: 15px; border-radius: 4px; display: none; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Dynamic Model Predictor</h2>
+    <p>This form dynamically adapts to whatever features your dataset contains!</p>
+    <form id="predictionForm">
+        <div id="dynamicFields"></div>
+        <button type="submit">Get Prediction</button>
+    </form>
+    <div id="result"></div>
+</div>
+
+<script>
+    let expectedFeatures = [];
+
+    // Fetch the dynamically defined features when page loads
+    fetch('/info')
+        .then(response => response.json())
+        .then(data => {
+            expectedFeatures = data.features;
+            const container = document.getElementById('dynamicFields');
+            expectedFeatures.forEach(feature => {
+                const group = document.createElement('div');
+                group.className = 'form-group';
+                
+                const label = document.createElement('label');
+                label.innerText = feature;
+                label.setAttribute('for', feature);
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.step = 'any';
+                input.id = feature;
+                input.name = feature;
+                input.required = true;
+                
+                group.appendChild(label);
+                group.appendChild(input);
+                container.appendChild(group);
+            });
+        });
+
+    // Handle dynamic form submission
+    document.getElementById('predictionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const resultDiv = document.getElementById('result');
+        resultDiv.style.display = 'none';
+
+        const payload = { features: {} };
+        expectedFeatures.forEach(feature => {
+            payload.features[feature] = parseFloat(document.getElementById(feature).value);
+        });
+
+        fetch('/predict', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.prediction !== undefined) {
+                resultDiv.className = 'success';
+                resultDiv.innerText = 'Prediction: ' + data.prediction.toFixed(4);
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.innerText = 'Error: ' + data.error;
+            }
+            resultDiv.style.display = 'block';
+        })
+        .catch(error => {
+            resultDiv.className = 'error';
+            resultDiv.innerText = 'Request failed: ' + error;
+            resultDiv.style.display = 'block';
+        });
+    });
+</script>
+
+</body>
+</html>
